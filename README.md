@@ -221,11 +221,79 @@ Edit `src/local_llm_playground/config.py` and append a `ModelConfig` entry:
 
 That's it; the CLI, server, and benchmark pick it up automatically.
 
+## Talk to your local model through WeChat (公众号 sandbox)
+
+You can wire any of the local models behind a real WeChat 公众号 sandbox in ~10 min. Architecture:
+
+```
+WeChat user ─► WeChat servers ─► cloudflared tunnel ─► localhost:8080
+                                                            │
+                                                ACK in <5s  │
+                                                            ▼
+                                         FastAPI (llm-wechat)
+                                                            │
+                                                            ▼
+                                             Background: LLMClient → Hermes 3
+                                                            │
+                                                            ▼
+                                          客服消息 API → user
+```
+
+Why "ACK + push" instead of synchronous reply: WeChat requires servers to respond within **5 seconds**, but Hermes 3 averages ~12 s and DeepSeek-R1 over 60 s. We send an instant ACK ("正在思考…") and then push the real answer via 客服消息 (custom service message) once the LLM finishes. Retries are dedupe'd by MsgId.
+
+### Setup (one-time)
+
+1. **Get a sandbox account.** Open <https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login>, scan with personal WeChat. You'll get `appID` + `appsecret`.
+2. **Install cloudflared** (free, no account, gives you a public HTTPS URL):
+
+   ```bash
+   brew install cloudflared
+   ```
+
+3. **Start the bridge:**
+
+   ```bash
+   export WECHAT_TOKEN="any_string_you_pick_min_3_chars"
+   export WECHAT_APPID="<the appID from sandbox>"
+   export WECHAT_APPSECRET="<the appsecret from sandbox>"
+   uv run llm-wechat --port 8080 --model hermes3:8b
+   ```
+
+4. **In a second terminal, open a tunnel:**
+
+   ```bash
+   cloudflared tunnel --url http://localhost:8080
+   ```
+
+   It prints a line like `Your quick Tunnel has been created! https://random-words.trycloudflare.com`.
+
+5. **Wire up the sandbox.** Back in the sandbox page, paste:
+
+   - **URL:** `https://random-words.trycloudflare.com/wechat`
+   - **Token:** the same `WECHAT_TOKEN` you exported above
+
+   Click **提交**. If everything's right you get "配置成功".
+
+6. **Follow the sandbox QR code** with your personal WeChat (you can have up to ~100 testers), then just chat with the test account. Your local Hermes 3 will reply.
+
+Sanity-check the server is alive without WeChat:
+
+```bash
+curl http://localhost:8080/                # should return service JSON
+```
+
+### Limitations of the sandbox
+
+- Up to ~100 test followers (QR-code-added)
+- Replies go through 客服消息 API, which expects users to have messaged you in the last 48 h (always true in a chat session)
+- Sandbox accounts cannot host menus or publish broadcasts — for that you need a verified subscription account
+
 ## Roadmap
 
 - [x] Phase 1: DeepSeek-R1 + Hermes 3 local, unified client, examples
 - [x] Phase 1.5: wire OpenAI's `codex` CLI to local Hermes 3 (so the same agent UX runs offline / free)
 - [x] Phase 1.75: real benchmarks against 3 local models, results in [`benchmarks/REPORT.md`](benchmarks/REPORT.md)
+- [x] Phase 1.9: WeChat 公众号 bridge (`llm-wechat`) — talk to local Hermes from any phone
 - [ ] Phase 2: add Xiaomi MiMo UltraSpeed (cloud) once trial access is approved, compare 1000 tps claim against local 14B
 - [ ] Phase 3: optional Next.js front-end matching `data-copilot` style
 

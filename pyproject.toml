@@ -23,6 +23,7 @@ dependencies = [
 llm-chat = "local_llm_playground.cli:app"
 llm-serve = "local_llm_playground.api:cli"
 llm-bench = "local_llm_playground.benchmark:app"
+llm-wechat = "local_llm_playground.wechat:cli"
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12.0"]
@@ -43,6 +44,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = [
     "E501",   # line too long
     "RUF001", # we use › intentionally in CLI prompts
+    "RUF002", # × in docstrings (e.g. "3×") is intentional
     "RUF003", # × in comments is intentional (means "by", e.g. "prompts × models")
     "B008",   # Typer's API requires `typer.Option()` as default values
 ]
