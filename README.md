@@ -282,6 +282,44 @@ Sanity-check the server is alive without WeChat:
 curl http://localhost:8080/                # should return service JSON
 ```
 
+### Live-verified end-to-end (June 21, 2026)
+
+Took ~30 min of trial-and-error to get the loop running through a free public tunnel.
+The actual happy path, once everything is configured:
+
+```
+WeChat user "Rachel" → 测试公众号 → Tencent → cloudflared tunnel → llm-wechat
+                                                                       │
+                                              ACK in <2 s ←────────────┤
+                                                                       ▼
+                                                          Hermes 3 (8B, local) ~6 s
+                                                                       │
+                                                                       ▼
+                                                          WeChat 客服消息 API
+                                                                       │
+WeChat user "Rachel" ← 测试公众号 ← Tencent ← ─────────────────────────┘
+
+# Server logs from the real run:
+# 19:36:32  POST from 162.62.81.123 (Tencent) — openid=orLS_2O85...
+# 19:36:36  Ollama 200 OK (Hermes finished)
+# 19:36:38  api.weixin.qq.com/cgi-bin/message/custom/send → HTTP 200 ✓
+```
+
+In the WeChat client, Rachel saw:
+
+> 🤔 收到,正在用本地模型推理,稍等几秒钟…
+>
+> Rachel, 我是一个 AI 助手, 名字是 Elsa. (etc.)
+
+(Hermes 3 cheekily named itself "Elsa" — we never told it that.)
+
+### Lessons learned the hard way
+
+- **Free tunnels expire when the laptop sleeps.** Each cloudflared/ngrok/lhr.life session generates a new random subdomain. For anything beyond a one-off demo, set up a Cloudflare Named Tunnel (free, persistent) or a paid ngrok plan.
+- **ngrok's free tier serves a browser-warning interstitial** for browser-like User-Agents, which breaks WeChat's verification request. localhost.run and trycloudflare don't have this problem.
+- **Refresh the sandbox QR follower if the loop appears silent.** WeChat 测试号 silently drops messages for non-followers; an expired follower state will mimic a network failure exactly. (We spent ~1 hour blaming Tencent's "anti-abuse blacklist" before realizing this; turned out to be wrong.)
+- **5-second ACK + background push is mandatory** for any local-LLM-backed WeChat bot, since even a 4-bit 8B model on Apple Silicon averages ~12 s.
+
 ### Limitations of the sandbox
 
 - Up to ~100 test followers (QR-code-added)
@@ -293,8 +331,8 @@ curl http://localhost:8080/                # should return service JSON
 - [x] Phase 1: DeepSeek-R1 + Hermes 3 local, unified client, examples
 - [x] Phase 1.5: wire OpenAI's `codex` CLI to local Hermes 3 (so the same agent UX runs offline / free)
 - [x] Phase 1.75: real benchmarks against 3 local models, results in [`benchmarks/REPORT.md`](benchmarks/REPORT.md)
-- [x] Phase 1.9: WeChat 公众号 bridge (`llm-wechat`) — talk to local Hermes from any phone
-- [ ] Phase 2: add Xiaomi MiMo UltraSpeed (cloud) once trial access is approved, compare 1000 tps claim against local 14B
+- [x] Phase 1.9: WeChat 公众号 bridge (`llm-wechat`) — _live-verified end-to-end on June 21, 2026_
+- [ ] Phase 2: add Xiaomi MiMo UltraSpeed (cloud) once trial access is approved (apply at [platform.xiaomimimo.com/ultraspeed](https://platform.xiaomimimo.com/ultraspeed); trial window June 9–23, 2026), compare 1000 tps claim against local 14B
 - [ ] Phase 3: optional Next.js front-end matching `data-copilot` style
 
 ## Why this project exists
