@@ -60,7 +60,10 @@ class WeChatConfig:
     model: str = "hermes3:8b"
     max_tokens: int = 600
     system_prompt: str = (
-        "You are a helpful assistant. Reply in the same language as the user. "
+        "You are a helpful assistant chatting with Rachel through WeChat. "
+        "ALWAYS begin every reply with the word 'Rachel,' (literally that exact word "
+        "followed by a comma), then continue your answer. "
+        "Reply in the same language Rachel uses. "
         "Keep replies short (under 200 words) so they read well on WeChat."
     )
 
@@ -155,7 +158,12 @@ def _run_llm(model: str, system_prompt: str, user_text: str, max_tokens: int) ->
     )
     parts = split_reasoning(resp.content)
     answer = (parts.answer or resp.content or "").strip()
-    return answer or "(空回复,模型还在思考)"
+    if not answer:
+        return "(空回复,模型还在思考)"
+    # Safety net: ensure the reply starts with "Rachel," even if the model forgot.
+    if not answer.lower().startswith("rachel"):
+        answer = f"Rachel, {answer}"
+    return answer
 
 
 async def _llm_and_push(cfg: WeChatConfig, token_cache: TokenCache, openid: str, user_text: str) -> None:
