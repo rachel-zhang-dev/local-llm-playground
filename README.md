@@ -335,6 +335,30 @@ In the WeChat client, Rachel saw:
 - [ ] Phase 2: add Xiaomi MiMo UltraSpeed (cloud) once trial access is approved (apply at [platform.xiaomimimo.com/ultraspeed](https://platform.xiaomimimo.com/ultraspeed); trial window June 9–23, 2026), compare 1000 tps claim against local 14B
 - [ ] Phase 3: optional Next.js front-end matching `data-copilot` style
 
+## Wiring MiMo in (when the approval email arrives)
+
+The config registry already has two MiMo entries pre-wired:
+
+- `mimo/v2.5-pro` — pay-as-you-go, anyone with a MiMo account can use it now
+- `mimo/ultraspeed` — beta only, gated by application + email approval
+
+To activate either one:
+
+```bash
+# 1. Drop your MiMo API key into .env (no MIMO_BASE_URL needed unless on Token Plan)
+echo 'MIMO_API_KEY=sk-...' >> .env
+
+# 2. Smoke-test the connection
+uv run llm-chat --model mimo/v2.5-pro "Hello, who are you?"
+
+# 3. Run the benchmark suite against MiMo + the three local models
+uv run llm-bench --models hermes3:8b,gpt-oss:20b,mimo/v2.5-pro --out benchmarks/results-with-mimo.json
+```
+
+The model name `mimo-v2.5-pro-ultraspeed` in the registry is a placeholder from
+the MiMo blog post; the approval email may give a slightly different model ID.
+If a 400 comes back, the only edit needed is the `model_id` line in `config.py`.
+
 ## Why this project exists
 
 I wanted one place to:

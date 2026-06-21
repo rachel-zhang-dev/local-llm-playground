@@ -86,13 +86,29 @@ MODELS: dict[str, ModelConfig] = {
         api_key_env="OPENAI_API_KEY",
         description="OpenAI GPT-5.5 via official API. Requires OPENAI_API_KEY.",
     ),
+    # Xiaomi MiMo — OpenAI-compatible, see https://platform.xiaomimimo.com/docs/en-US/api/chat/openai-api
+    # The MiMo API uses `max_completion_tokens` (not `max_tokens`); the OpenAI Python
+    # SDK 1.x accepts either, so we don't special-case it. If you start seeing
+    # 400s mentioning `max_tokens` from MiMo, swap that parameter name in client.py.
+    "mimo/v2.5-pro": ModelConfig(
+        name="mimo/v2.5-pro",
+        provider=Provider.OPENAI_COMPATIBLE,
+        model_id="mimo-v2.5-pro",
+        base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
+        api_key_env="MIMO_API_KEY",
+        description="Xiaomi MiMo V2.5-Pro (pay-as-you-go). Open to anyone with a MiMo API key.",
+    ),
+    # UltraSpeed beta — same model, 10x faster inference. Application required at
+    # https://platform.xiaomimimo.com/ultraspeed (trial window: Jun 9–23, 2026).
+    # The exact `model_id` will be confirmed in the approval email; the placeholder
+    # below is the name used in the MiMo blog post.
     "mimo/ultraspeed": ModelConfig(
         name="mimo/ultraspeed",
         provider=Provider.OPENAI_COMPATIBLE,
         model_id="mimo-v2.5-pro-ultraspeed",
         base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
         api_key_env="MIMO_API_KEY",
-        description="Xiaomi MiMo UltraSpeed (1T params, 1000+ tps). Requires MIMO_API_KEY.",
+        description="Xiaomi MiMo UltraSpeed (1T params, 1000+ tps). Beta-only; requires MIMO_API_KEY.",
     ),
 }
 
