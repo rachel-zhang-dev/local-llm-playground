@@ -1,0 +1,66 @@
+# Benchmark prompts. Each one targets a different "task shape" you'd hit in
+# real coding work, so we can see which model is good at which thing.
+
+# Note: max_tokens is generous to leave room for reasoning models
+# (deepseek-r1, gpt-oss) to think AND produce an answer.
+
+[[prompts]]
+id = "code-oneliner"
+category = "code-generation"
+description = "Short Python code: do they get the API right?"
+max_tokens = 800
+text = """
+Write a Python one-liner (using only the standard library) that returns the most common element in a list `xs`. Output ONLY the expression after `most_common = `, nothing else.
+"""
+
+[[prompts]]
+id = "logic-snail"
+category = "reasoning"
+description = "Classic logic puzzle. R1-style models should do better."
+max_tokens = 1500
+text = """
+A snail climbs a 30-foot wall. Each day it climbs 3 feet, but at night it slides 2 feet down. On which day does it reach the top of the wall? Show your reasoning briefly, then state the final answer as 'Day N'.
+"""
+
+[[prompts]]
+id = "explain-gil"
+category = "explanation"
+description = "Tests medium-length structured output."
+max_tokens = 800
+text = """
+Explain Python's Global Interpreter Lock (GIL) in exactly 3 bullet points. Each bullet must be under 25 words. No preamble, just the bullets.
+"""
+
+[[prompts]]
+id = "refactor"
+category = "code-refactor"
+description = "Idiomatic transformation; checks Python fluency."
+max_tokens = 800
+text = """
+Refactor this Python function into a single-line list comprehension. Output ONLY the new one-line version, no explanation.
+
+def f(lst):
+    result = []
+    for x in lst:
+        if x > 0:
+            result.append(x * 2)
+    return result
+"""
+
+[[prompts]]
+id = "bug-find"
+category = "code-review"
+description = "Finds a subtle bug; tests careful reading."
+max_tokens = 1200
+text = """
+Find the bug in this Python function and explain how to fix it. Be concise (under 80 words).
+
+def average(numbers):
+    return sum(numbers) / len(numbers) if numbers else 0
+
+def report(scores_by_student):
+    summary = {}
+    for name, scores in scores_by_student.items():
+        summary[name] = average(scores)
+    return summary
+"""

@@ -99,6 +99,34 @@ uv run python examples/05_function_calling.py   # tool use with Hermes 3
 uv run python examples/06_compare_models.py     # head-to-head
 ```
 
+## Benchmark results
+
+A 5-prompt × 3-model bench (`benchmarks/run.py`, full report in [`benchmarks/REPORT.md`](benchmarks/REPORT.md)) on a MacBook Pro M4 / 24 GB unified memory:
+
+| Model | Avg throughput | Avg latency | Avg out tokens |
+|---|---:|---:|---:|
+| `gpt-oss:20b` | **16.4 tok/s** ⚡ | 29.4s | 514 |
+| `deepseek-r1:14b` | 9.5 tok/s | 61.7s | 602 |
+| `hermes3:8b` | 5.6 tok/s | **12.8s** ⚡ | 82 |
+
+Takeaways from the run:
+
+- **`gpt-oss:20b` is fastest on M-series despite being the biggest.** Counter-intuitive but real: its Q4 quantization is tuned for Apple Silicon and it consistently outpaces the smaller 14B and 8B models in tokens/sec.
+- **`hermes3:8b` wins wall-clock time, because it doesn't "think".** It emits short, direct answers and is back in ~13 s. The catch: it got the classic snail-on-wall puzzle wrong (said Day 31; correct answer is Day 28). Reasoning models got it right.
+- **`deepseek-r1:14b` spends ~80% of its tokens inside `<think>`.** Great for puzzles, but you'll want a generous `max_tokens` (1200+) on agentic / code-review tasks or it runs out of room before producing a final answer.
+- **Pick by task**, not by size:
+  - Code completion / refactor → `hermes3:8b` (fast, concise, ~no reasoning overhead)
+  - Logic puzzles / math / multi-step reasoning → `deepseek-r1:14b` or `gpt-oss:20b`
+  - Agent / tool-calling backend for Codex CLI → `hermes3:8b` or `gpt-oss:20b` (DeepSeek-R1 doesn't expose tools)
+
+Re-run any time:
+
+```bash
+uv run python benchmarks/run.py
+# or pick subsets:
+uv run python benchmarks/run.py --models hermes3:8b,gpt-oss:20b --prompts logic-snail,bug-find
+```
+
 ## Wiring Codex CLI to a local Ollama model
 
 OpenAI's `codex` CLI has built-in OSS support via `--oss --local-provider ollama`. The interesting bits below are the gotchas you hit on macOS in 2026.
@@ -197,6 +225,7 @@ That's it; the CLI, server, and benchmark pick it up automatically.
 
 - [x] Phase 1: DeepSeek-R1 + Hermes 3 local, unified client, examples
 - [x] Phase 1.5: wire OpenAI's `codex` CLI to local Hermes 3 (so the same agent UX runs offline / free)
+- [x] Phase 1.75: real benchmarks against 3 local models, results in [`benchmarks/REPORT.md`](benchmarks/REPORT.md)
 - [ ] Phase 2: add Xiaomi MiMo UltraSpeed (cloud) once trial access is approved, compare 1000 tps claim against local 14B
 - [ ] Phase 3: optional Next.js front-end matching `data-copilot` style
 

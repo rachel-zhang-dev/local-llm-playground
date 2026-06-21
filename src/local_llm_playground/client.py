@@ -15,6 +15,21 @@ from local_llm_playground.config import ModelConfig, Provider, get_model
 Role = Literal["system", "user", "assistant", "tool"]
 
 
+def _normalize_ollama_content(message: dict[str, Any]) -> str:
+    """Fold Ollama's separate `thinking` field back into `<think>` tags.
+
+    Newer Ollama versions (>= 0.24) return reasoning models with separate
+    `content` and `thinking` fields. We re-wrap thinking in `<think>` tags so
+    downstream code (split_reasoning, prompts, CLI) only has to deal with
+    one shape.
+    """
+    content = message.get("content", "") or ""
+    thinking = message.get("thinking", "") or ""
+    if not thinking:
+        return content
+    return f"<think>{thinking}</think>{content}"
+
+
 @dataclass
 class ChatMessage:
     role: Role
@@ -106,17 +121,21 @@ class LLMClient:
         if max_tokens is not None:
             options["num_predict"] = max_tokens
 
+        chat_kwargs: dict[str, Any] = dict(kwargs)
+        if self.config.supports_reasoning:
+            chat_kwargs.setdefault("think", True)
+
         t0 = time.perf_counter()
         resp = client.chat(
             model=self.config.model_id,
             messages=[{"role": m.role, "content": m.content} for m in messages],
             options=options,
-            **kwargs,
+            **chat_kwargs,
         )
         elapsed = time.perf_counter() - t0
 
         return ChatResponse(
-            content=resp["message"]["content"],
+            content=_normalize_ollama_content(resp.get("message", {})),
             model=self.config.name,
             elapsed_seconds=elapsed,
             usage=Usage(
@@ -138,16 +157,39 @@ class LLMClient:
         if max_tokens is not None:
             options["num_predict"] = max_tokens
 
+        stream_kwargs: dict[str, Any] = dict(kwargs)
+        if self.config.supports_reasoning:
+            stream_kwargs.setdefault("think", True)
+
         stream = client.chat(
             model=self.config.model_id,
             messages=[{"role": m.role, "content": m.content} for m in messages],
             options=options,
             stream=True,
-            **kwargs,
+            **stream_kwargs,
         )
+        thinking_open = False
         for chunk in stream:
-            delta = chunk.get("message", {}).get("content", "")
+            msg = chunk.get("message", {}) or {}
+            thinking_piece = msg.get("thinking", "")
+            content_piece = msg.get("content", "")
+            delta_parts: list[str] = []
+            if thinking_piece:
+                if not thinking_open:
+                    delta_parts.append("<think>")
+                    thinking_open = True
+                delta_parts.append(thinking_piece)
+            if content_piece and thinking_open:
+                delta_parts.append("</think>")
+                thinking_open = False
+            if content_piece:
+                delta_parts.append(content_piece)
+            delta = "".join(delta_parts)
+
             done = bool(chunk.get("done"))
+            if done and thinking_open:
+                delta += "</think>"
+                thinking_open = False
             usage = None
             if done:
                 usage = Usage(

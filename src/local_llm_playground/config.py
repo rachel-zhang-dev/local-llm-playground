@@ -75,7 +75,8 @@ MODELS: dict[str, ModelConfig] = {
         provider=Provider.OLLAMA,
         model_id="gpt-oss:20b",
         base_url=OLLAMA_HOST,
-        description="OpenAI gpt-oss 20B (open weights). Already on disk.",
+        supports_reasoning=True,
+        description="OpenAI gpt-oss 20B (open weights). Reasoning model, fast on M-series.",
     ),
     "openai/gpt-5.5": ModelConfig(
         name="openai/gpt-5.5",
