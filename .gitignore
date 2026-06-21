@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Output
+results/
+*.json.local
+
+# Jupyter
+.ipynb_checkpoints/

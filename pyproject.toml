@@ -1,0 +1,47 @@
+[project]
+name = "local-llm-playground"
+version = "0.1.0"
+description = "Hands-on POC for talking to local (Ollama: DeepSeek-R1, Hermes 3) and cloud (OpenAI, MiMo) LLMs through a single unified client."
+readme = "README.md"
+authors = [
+    { name = "Rachel Zhang", email = "ruiping.zhang.rachel@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.138.0",
+    "httpx>=0.28.1",
+    "ollama>=0.6.2",
+    "openai>=2.43.0",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "rich>=15.0.0",
+    "typer>=0.26.7",
+    "uvicorn[standard]>=0.49.0",
+]
+
+[project.scripts]
+llm-chat = "local_llm_playground.cli:app"
+llm-serve = "local_llm_playground.api:cli"
+llm-bench = "local_llm_playground.benchmark:app"
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.6.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",   # line too long
+    "RUF001", # we use › intentionally in CLI prompts
+    "B008",   # Typer's API requires `typer.Option()` as default values
+]
